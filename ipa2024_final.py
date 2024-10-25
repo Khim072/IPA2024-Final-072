@@ -11,11 +11,13 @@ import json
 import time
 import os
 from requests_toolbelt.multipart.encoder import MultipartEncoder
+import restconf_final as rest
 
 #######################################################################################
 # 2. Assign the Webex access token to the variable ACCESS_TOKEN using environment variables.
 
 ACCESS_TOKEN = os.environ.get("WEBEX_ACCESS_TOKEN")
+print("Using ACCESS_TOKEN:", ACCESS_TOKEN)
 
 #######################################################################################
 # 3. Prepare parameters get the latest message for messages API.
@@ -35,7 +37,7 @@ while True:
     getParameters = {"roomId": roomIdToGetMessages, "max": 1}
 
     # the Webex Teams HTTP header, including the Authoriztion
-    getHTTPHeader = {"Authorization": <!!!REPLACEME!!!>}
+    getHTTPHeader = {"Authorization": "Bearer {ACCESS_TOKEN}"}
 
 # 4. Provide the URL to the Webex Teams messages API, and extract location from the received message.
     
@@ -44,8 +46,8 @@ while True:
     # - Store the message in the "r" variable.
     r = requests.get(
         "https://webexapis.com/v1/messages",
-        params=<!!!REPLACEME with HTTP parameters!!!>,
-        headers=<!!!REPLACEME with HTTP headers!!!>,
+        params=getParameters,
+        headers=getHTTPHeader,
     )
     # verify if the retuned HTTP status code is 200/OK
     if not r.status_code == 200:
@@ -69,30 +71,23 @@ while True:
 
     # check if the text of the message starts with the magic character "/" followed by your studentID and a space and followed by a command name
     #  e.g.  "/66070123 create"
-    if message.startswith("<!!!REPLACEME!!!>"):
+    if message.startswith("/65070072") == True:
 
         # extract the command
-        command = <!!!REPLACEME!!!>
-        print(command)
-
+        command = message.split(" ")[1]
+        print("Command: {command}")
 # 5. Complete the logic for each command
 
         if command == "create":
-            <!!!REPLACEME with code for create command!!!>     
+            responseMessage = rest.create()
         elif command == "delete":
-            <!!!REPLACEME with code for delete command!!!>
+            responseMessage = rest.delete()
         elif command == "enable":
-            <!!!REPLACEME with code for enable command!!!>
+            responseMessage = rest.enable()
         elif command == "disable":
-            <!!!REPLACEME with code for disable command!!!>
+            responseMessage = rest.disable()
         elif command == "status":
-            <!!!REPLACEME with code for status command!!!>
-         elif command == "gigabit_status":
-            <!!!REPLACEME with code for gigabit_status command!!!>
-        elif command == "showrun":
-            <!!!REPLACEME with code for showrun command!!!>
-        else:
-            responseMessage = "Error: No command or unknown command"
+            responseMessage = rest.status() 
         
 # 6. Complete the code to post the message to the Webex Teams room.
 
@@ -109,32 +104,32 @@ while True:
         # https://developer.webex.com/docs/basics for more detail
 
         if command == "showrun" and responseMessage == 'ok':
-            filename = "<!!!REPLACEME with show run filename and path!!!>"
-            fileobject = <!!!REPLACEME with open file!!!>
-            filetype = "<!!!REPLACEME with Content-type of the file!!!>"
+            filename = "showrun.txt"
+            fileobject = open(filename, "rb")
+            filetype = "text/plain"
             postData = {
-                "roomId": <!!!REPLACEME!!!>,
+                "roomId": roomIdToGetMessages,
                 "text": "show running config",
-                "files": (<!!!REPLACEME!!!>, <!!!REPLACEME!!!>, <!!!REPLACEME!!!>),
+                "files": (filename, fileobject, filetype),
             }
-            postData = MultipartEncoder(<!!!REPLACEME!!!>)
+            postData = MultipartEncoder(postData)
             HTTPHeaders = {
             "Authorization": ACCESS_TOKEN,
-            "Content-Type": <!!!REPLACEME with postData Content-Type!!!>,
+            "Content-Type": postData.content_type,
             }
         # other commands only send text, or no attached file.
         else:
-            postData = {"roomId": <!!!REPLACEME!!!>, "text": <!!!REPLACEME!!!>}
+            postData = {"roomId": roomIdToGetMessages, "text": responseMessage}
             postData = json.dumps(postData)
 
             # the Webex Teams HTTP headers, including the Authoriztion and Content-Type
-            HTTPHeaders = {"Authorization": <!!!REPLACEME!!!>, "Content-Type": <!!!REPLACEME!!!>}   
+            HTTPHeaders = {"Authorization": ACCESS_TOKEN, "Content-Type": "application/json"}   
 
         # Post the call to the Webex Teams message API.
         r = requests.post(
-            "<!!!REPLACEME with URL of Webex Teams Messages API!!!>",
-            data=<!!!REPLACEME!!!>,
-            headers=<!!!REPLACEME!!!>,
+            "https://webexapis.com/v1/messages",
+            data=postData,
+            headers=HTTPHeaders,
         )
         if not r.status_code == 200:
             raise Exception(
